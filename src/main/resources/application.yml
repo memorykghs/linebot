@@ -1,0 +1,15 @@
+spring: 
+  profiles:
+    active: local
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/linebot
+#      username: root
+#      password: root
+      authentication-database: admin
+line:
+  bot:    channel-token: UpPlB1N1zgSVQ43xij5cArfetOTsw73pfaBm+LqzYgEfWFohH/dNMV8dgU6VVq6w+Wyzy0GV8sff05OH7Yq5Qd/1mJ592vJ13httcxlQrkZ9dKhIT3+LahrVo3H21reolf3B71Em9Pi/yhq8vN+UxgdB04t89/1O/w1cDnyilFU=
+    channel-secret: d7950964b7ae7341e3629868ac5671ad
+    handler:      path: /callback
+      enabled: true
+weather.api.key: CWB-320F1022-B376-49B4-814C-1BBFBC0D0564
