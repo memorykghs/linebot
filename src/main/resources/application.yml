@@ -7,8 +7,11 @@ spring:
 #      username: root
 #      password: root
       authentication-database: admin
-line.bot:    channel-token: <your channel token>
+line.bot:
+    channel-token: <your channel token>
     channel-secret: <your channel secret>
-    handler:      path: /callback
-      enabled: true
-weather.api.key: CWB-320F1022-B376-49B4-814C-1BBFBC0D0564
+    handler:
+      path: /callback
+      enabled: true
+
+weather.api.key: 
