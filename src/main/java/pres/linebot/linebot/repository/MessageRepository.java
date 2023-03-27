@@ -13,6 +13,6 @@ public interface MessageRepository extends MongoRepository<Message, String>{
 	/**
 	 * get user all messages
 	 */
-	List<Message> findByReplyToken(String replyToken);
+	List<Message> findByUserId(String userId);
 	
 }

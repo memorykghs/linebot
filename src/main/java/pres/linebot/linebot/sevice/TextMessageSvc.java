@@ -4,8 +4,6 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +14,9 @@ import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.response.BotApiResponse;
 
+import lombok.extern.slf4j.Slf4j;
 import pres.linebot.linebot.entity.Message;
+import pres.linebot.linebot.exception.DataNotFoundException;
 import pres.linebot.linebot.repository.MessageRepository;
 
 /**
@@ -26,28 +26,29 @@ import pres.linebot.linebot.repository.MessageRepository;
  * @author memorykghs
  */
 @Service
+@Slf4j
 public class TextMessageSvc {
-
-	private static final Logger LOGGER = LoggerFactory.getLogger(TextMessageSvc.class);
 
 	@Autowired
 	private MessageRepository messageRepository;
 
 	@Autowired
 	private LineMessagingClient lineMessagingClient;
-	
+
 	/**
 	 * determine action according to keyword
 	 * 
 	 * @param event
+	 * @throws DataNotFoundException
 	 */
-	public void textMessageHandler(MessageEvent<TextMessageContent> event) {
+	public void textMessageHandler(MessageEvent<TextMessageContent> event) throws DataNotFoundException {
 		TextMessageContent textMessage = event.getMessage();
 		String keyword = textMessage.getText();
-		
+
 		switch (keyword) {
 		case "查詢訊息":
 			getTextMessages(event);
+			break;
 		default:
 			saveTextMessage(event);
 		}
@@ -62,72 +63,80 @@ public class TextMessageSvc {
 		TextMessageContent textMessage = event.getMessage();
 		String replyToken = event.getReplyToken();
 
-		try {
+		// save message to database
+		log.debug("===== save message =====");
 
-			// save message to database
-			LOGGER.debug("===== save message =====");
+		Message message = new Message();
+		message.setUserId(event.getSource().getUserId());
+		message.setReplyToken(replyToken);
+		message.setCreateTime(new Timestamp(System.currentTimeMillis()));
+		message.setContent(textMessage.getText());
+		messageRepository.save(message);
 
-			Message message = new Message();
-			message.setReplyToken(replyToken);
-			message.setCreateTime(new Timestamp(System.currentTimeMillis()));
-			message.setContent(textMessage.getText());
-			messageRepository.save(message);
+		log.debug("===== message save success =====");
 
-			LOGGER.debug("===== message save success =====");
+		// return message
+		TextMessage replyTextMessage = new TextMessage(textMessage.getText());
+		replyMessage(replyToken, replyTextMessage, "save");
 
-			// return message
-			TextMessage replyTextMessage = new TextMessage("儲存成功");
-			ReplyMessage replyMessage = new ReplyMessage(replyToken, replyTextMessage);
-
-			final BotApiResponse botApiResponse;
-			botApiResponse = lineMessagingClient.replyMessage(replyMessage).get();
-
-			LOGGER.info("=====> text message event reply: {}", botApiResponse.getMessage());
-
-		} catch (InterruptedException | ExecutionException e) {
-			LOGGER.error("=====> text message event occurs error: {}", e.getMessage());
-			e.printStackTrace();
-			return;
-		}
-
-		LOGGER.debug("===== text message reply successed =====");
+		log.debug("===== text message reply successed =====");
 	}
 
 	/**
 	 * get all text message
 	 * 
 	 * @param event
+	 * @throws DataNotFoundException
 	 */
-	private void getTextMessages(MessageEvent<TextMessageContent> event) {
+	private void getTextMessages(MessageEvent<TextMessageContent> event) throws DataNotFoundException {
 		String replyToken = event.getReplyToken();
-		
-		try {
+		String userId = event.getSource().getUserId();
 
-			// save message to database
-			LOGGER.debug("===== get messages =====");
-			List<Message> messages = messageRepository.findByReplyToken(replyToken);
-			LOGGER.debug("===== messages get success =====");
-			
-			// handle messages
-			StringBuilder sb = new StringBuilder();
-			messages.stream().forEach(e -> sb.append('→').append(". ").append(e.getContent()).append("\n"));
+		// save message to database
+		log.debug("===== get messages =====");
+		List<Message> messages = messageRepository.findByUserId(userId);
+
+		if (messages == null || messages.isEmpty()) {
+			log.debug("=====> data not found");
+//			throw new DataNotFoundException(requestId, replyToken, "你還沒有輸入訊息歐~");
 			
 			// return message
-			TextMessage replyTextMessage = new TextMessage(sb.toString());
+			TextMessage replyTextMessage = new TextMessage("還沒有輸入訊息歐~");
+			replyMessage(replyToken, replyTextMessage, "data not found");
+			return;
+		}
+
+		// handle messages
+		StringBuilder sb = new StringBuilder();
+		messages.stream().forEach(e -> sb.append('→').append(' ').append(e.getContent()).append("\n"));
+
+		// return message
+		TextMessage replyTextMessage = new TextMessage(sb.toString());
+		replyMessage(replyToken, replyTextMessage, "query");
+
+		log.debug("===== get all messages reply successed =====");
+	}
+
+	/**
+	 * handle reply message
+	 * 
+	 * @param replyToken
+	 * @param replyTextMessage
+	 * @param action
+	 */
+	private void replyMessage(String replyToken, TextMessage replyTextMessage, String action) {
+		try {
 			ReplyMessage replyMessage = new ReplyMessage(replyToken, replyTextMessage);
 
 			final BotApiResponse botApiResponse;
 			botApiResponse = lineMessagingClient.replyMessage(replyMessage).get();
 
-			LOGGER.info("=====> get text message event reply: {}", botApiResponse.getMessage());
+			log.info("=====> {} message event reply: {}", action, botApiResponse.getMessage());
 
 		} catch (InterruptedException | ExecutionException e) {
-			LOGGER.error("=====> get text message event occurs error: {}", e.getMessage());
+			log.error("=====> {} message event occurs error: {}", action, e.getMessage());
 			e.printStackTrace();
 			return;
 		}
-
-		LOGGER.debug("===== get all messages reply successed =====");
 	}
-
 }

@@ -13,8 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * validate signature
- * - whether message is from line or not
+ * validate signature - whether message is from line or not
  * 
  * @author memorykghs
  */
@@ -31,11 +30,13 @@ public class SignatureValidator {
 			LOGGER.info("===== validating signature =====");
 			Mac mac = Mac.getInstance("HmacSHA256");
 			mac.init(new SecretKeySpec(channelSecret.getBytes(), "HmacSHA256"));
+
+			// Request body string encode
 			String calculatedSignature = Base64.getEncoder().encodeToString(mac.doFinal(requestBody.getBytes()));
-			
+
 			boolean isEqual = calculatedSignature.equals(signature);
 			LOGGER.info("=====> validating result: {}", isEqual);
-			
+
 			return isEqual;
 
 		} catch (NoSuchAlgorithmException | InvalidKeyException e) {

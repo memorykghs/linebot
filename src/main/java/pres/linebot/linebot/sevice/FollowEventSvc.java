@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,13 +15,15 @@ import com.linecorp.bot.model.message.StickerMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.response.BotApiResponse;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class FollowEventSvc {
 
 	@Autowired
 	private LineMessagingClient lineMessagingClient;
 	
-	private static final Logger LOGGER = LoggerFactory.getLogger(FollowEventSvc.class);
 
 	/**
 	 * handle follow event
@@ -34,37 +34,35 @@ public class FollowEventSvc {
 	 */
 	public void followEventHandler(FollowEvent event) {
 
-		LOGGER.info("===== follow event =====");
+		log.info("===== follow event =====");
 		String replyToken = event.getReplyToken();
 
 		// generate sticker message
-		StickerMessage stickerMessage = new StickerMessage("11537", "52002750");
+		StickerMessage stickerMessage = new StickerMessage("11538", "51626494");
 
 		// generate text message
 		StringBuilder sb = new StringBuilder();
-		TextMessage textMessage1 = generateAmountTrackTextMessage(sb);
-		TextMessage textMessage2 = generateDailyAmountTrackTextMessage(sb);
+		TextMessage textMessage1 = generateFollowEventMessage(sb);
 
 		// wrapped as return message object: ReplyMessage
 		List<Message> messages = new ArrayList<>();
 		messages.add(stickerMessage);
 		messages.add(textMessage1);
-		messages.add(textMessage2);
 		ReplyMessage replyMessage = new ReplyMessage(replyToken, messages);
 
 		final BotApiResponse botApiResponse;
 		try {
 			// return message
 			botApiResponse = lineMessagingClient.replyMessage(replyMessage).get();
-			LOGGER.info("=====> follow event reply: {}", botApiResponse.getMessage());
+			log.info("=====> follow event reply: {}", botApiResponse.getMessage());
 
 		} catch (InterruptedException | ExecutionException e) {
-			LOGGER.error("=====> follow event occurs error: {}", e.getMessage());
+			log.error("=====> follow event occurs error: {}", e.getMessage());
 			e.printStackTrace();
 			return;
 		}
 
-		LOGGER.debug("===== follow event reply successed =====");
+		log.debug("===== follow event reply successed =====");
 	}
 	
 	/**
@@ -73,25 +71,8 @@ public class FollowEventSvc {
 	 * 
 	 * @return
 	 */
-	private TextMessage generateAmountTrackTextMessage(StringBuilder sb) {
-		sb.append("哈囉，歡迎加入好友。可以使用'記帳'關鍵字開始每日記帳。\n")
-			.append("請使用下方規格：\n")
-			.append("日期：yyyyMMdd\n")
-			.append("項目： 例：飲料、餐費\n")
-			.append("金額：消費金額\n");
-		TextMessage textMessage = new TextMessage(sb.toString());
-		sb.setLength(0);
-		return textMessage;
-	}
-	
-	/**
-	 * generate text message
-	 * - show daily total expense
-	 * 
-	 * @return
-	 */
-	private TextMessage generateDailyAmountTrackTextMessage(StringBuilder sb) {
-		sb.append("輸入'當日消費'可以顯示當日總花費金額。\n");
+	private TextMessage generateFollowEventMessage(StringBuilder sb) {
+		sb.append("哈囉，歡迎加入好友。\n").append("可以使用'查詢訊息'關鍵字查詢已送出的訊息。");
 		TextMessage textMessage = new TextMessage(sb.toString());
 		sb.setLength(0);
 		return textMessage;
